@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -31,7 +31,6 @@
     }
 
     h1 { color: #45b8ff; }
-
     p { color: #a9bed1; }
 
     #status {
@@ -58,40 +57,74 @@
 
   <script>
     async function onVerified(token) {
-  const status = document.getElementById("status");
+      const status = document.getElementById("status");
+      status.textContent = "Проверяем доступ к JARVIS...";
 
-  status.textContent = "Проверяем доступ к JARVIS...";
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const callback = params.get("callback");
+        const state = params.get("state");
 
-  try {
-    const response = await fetch(
-      "https://jarvis-ai-worker.sg530507.workers.dev/verify",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ token })
+        if (!callback || !state) {
+          throw new Error("Не найдено подключение к приложению JARVIS");
+        }
+
+        const callbackUrl = new URL(callback);
+
+        if (
+          callbackUrl.protocol !== "http:" ||
+          callbackUrl.hostname !== "127.0.0.1" ||
+          callbackUrl.pathname !== "/callback"
+        ) {
+          throw new Error("Некорректный адрес приложения");
+        }
+
+        const response = await fetch(
+          "https://jarvis-ai-worker.sg530507.workers.dev/verify",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ token })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.session) {
+          throw new Error(data.error || "Проверка не пройдена");
+        }
+
+        status.textContent = "Передаём доступ приложению JARVIS...";
+
+        const callbackResponse = await fetch(callbackUrl.toString(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            session: data.session,
+            state: state
+          })
+        });
+
+        const callbackData = await callbackResponse.json();
+
+        if (!callbackResponse.ok || !callbackData.success) {
+          throw new Error("Не удалось передать доступ приложению");
+        }
+
+        status.textContent =
+          "Готово! JARVIS получил доступ к облачному ИИ. Можешь закрыть страницу.";
+
+      } catch (error) {
+        status.textContent =
+          "Ошибка проверки или подключения. Попробуй ещё раз.";
+
+        console.error("JARVIS verification error:", error);
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success || !data.session) {
-      throw new Error(data.error || "Проверка не пройдена");
     }
-
-    status.textContent =
-      "Проверка пройдена! Сессия JARVIS подготовлена.";
-
-    console.log("JARVIS_SESSION:", data.session);
-
-  } catch (error) {
-    status.textContent =
-      "Ошибка проверки. Обнови страницу и попробуй снова.";
-
-    console.error("JARVIS verification error:", error);
-  }
-}
 
     function onError() {
       document.getElementById("status").textContent =
@@ -100,3 +133,4 @@
   </script>
 </body>
 </html>
+```
