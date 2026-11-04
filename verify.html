@@ -57,13 +57,41 @@
   </div>
 
   <script>
-    function onVerified(token) {
-      document.getElementById("status").textContent =
-        "Проверка пройдена. Подготавливаем JARVIS...";
-      
-      // Передачу токена приложению добавим следующим шагом.
-      console.log("Turnstile verification completed");
+    async function onVerified(token) {
+  const status = document.getElementById("status");
+
+  status.textContent = "Проверяем доступ к JARVIS...";
+
+  try {
+    const response = await fetch(
+      "https://jarvis-ai-worker.sg530507.workers.dev/verify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ token })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.session) {
+      throw new Error(data.error || "Проверка не пройдена");
     }
+
+    status.textContent =
+      "Проверка пройдена! Сессия JARVIS подготовлена.";
+
+    console.log("JARVIS_SESSION:", data.session);
+
+  } catch (error) {
+    status.textContent =
+      "Ошибка проверки. Обнови страницу и попробуй снова.";
+
+    console.error("JARVIS verification error:", error);
+  }
+}
 
     function onError() {
       document.getElementById("status").textContent =
